@@ -185,7 +185,7 @@ func (m *Manager) removeClient(client *Client) {
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	switch origin {
-	case "https://localhost:8080":
+	case "http://localhost:8080":
 		return true
 	default:
 		return false
