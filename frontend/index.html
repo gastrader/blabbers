@@ -13,38 +13,55 @@
 <body>
     <div class="center">
         <h1>BLABBERS</h1>
-        <h3 id="chat-header">Currently in chat: General</h3>
+        <h3 id="chat-header">Currently in Chatroom: General</h3>
         <h3 id="connection-header">Connected to WS: False</h3>
+        <h3 id="loggeduser">Current User:</h3>
 
-        <form id="chatroom-selection">
+        <form id="login-form" style="flex: content;">
+            <input type="text" id="username" name="username" placeholder="Choose a username" autofocus required>
+            <input type="submit" value="Select Username">
+        </form>
+
+
+        <form id="chatroom-selection" style="margin-top: 10px;">
             <label>Chatroom:</label>
-            <input type="text" id="chatroom" name="chatroom"/>
-            <input type="submit" value="Change Room"/>
+            <input type="submit" value="Create a private chat"/>
+        </form>
+        
+
+        <form id="join-room" style="margin-top: 10px;">
+            <label for="join">Join a chat:</label>
+            <input type="text" id="join" name="join" placeholder="Insert UUID">
+            <input type="submit" value="Join" />
         </form>
         <br>
-
-        <textarea class="messagearea" id="chatmessages" readonly name="chatmessages" rows="4" cols="50" placeholder="Welcome to the chatroom..."></textarea>
-
+        <button onclick="copyToClipboard(this)" id="copy" name="copy">
+            Copy Chat Link
+        </button>
+        <br>
         <br>
 
-        <form id="chatroom-message">
-            <label for="message">Message:</label>
-            <input type="text" id="message" name="message">
-            <br>
-            <br>
+        <textarea class="messagearea" id="chatmessages" readonly name="chatmessages" rows="4" cols="50" placeholder="Welcome to the general chatroom..."></textarea>
+
+        <br>
+        <br>
+
+        <form id="chatroom-message" style="flex: content;">
+            <input type="text" id="message" name="message" placeholder="Write your message">
             <input type="submit" value="Send Msg">
-
         </form>
-        <div style="border: 3px dashed rgb(214,207,255); margin-top:30px; padding:10px; border-radius: 10px;">
-            <form id="login-form">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username"><br>
-                <label for="password">Password:</label>
-                <input type="text" id="password" name="password"><br><br>
-                <input type="submit" value="Login">
-
-            </form>
+        <div id="customAlert" class="modal" style="border-radius: 25px;">
+            <div class="modal-content" style="border-radius: 15px;">
+                <h2>Please select a username!</h2>
+                <form id="customAlertForm">
+                    <input type="text" placeholder="Select a username"  id="guest-username" name="guest-username">
+                    <input type="submit" value="Submit">
+                </form>
+                <br>
+                <button onclick="closeCustomAlert()">Close</button>
+            </div>
         </div>
+
 
     </div>
 
@@ -73,6 +90,23 @@
                 this.sent = sent;
             }
         }
+                
+        class ChangeChatRoomEvent {
+            constructor(name, from) {
+                this.name = name;
+                this.from = from;
+            }
+        }
+
+        function showCustomAlert() {
+                const modal = document.getElementById('customAlert');
+                modal.style.display = 'block';
+            }
+
+        function closeCustomAlert() {
+            const modal = document.getElementById('customAlert');
+            modal.style.display = 'none';
+        }          
 
         function routeEvent(event) {
             if (event.type === undefined) {
@@ -97,37 +131,74 @@
             textarea.innerHTML = textarea.innerHTML + "\n" + formattedMsg
             textarea.scrollTop = textarea.scrollHeight;
         }
-        
-        class ChangeChatRoomEvent {
-            constructor(name) {
-                this.name = name;
-            }
-        }
 
         function changeChatRoom(){
             console.log("in the function")
-            var newchat = document.getElementById("chatroom");
-            console.log(newchat)
-            if (newchat != null && newchat.value != selectedChat){
-                selectedChat = newchat.value;
-                console.log(newchat.value)
+            const username = document.getElementById('username').value
+            const uuid = generateUUID();
+            let changeEvent = new ChangeChatRoomEvent(uuid, username);
+            console.log(changeEvent)
+            sendEvent("change_room", changeEvent)
+
+            header = document.getElementById("chat-header").innerHTML = "Currently in chatroom: " + uuid
+            textarea = document.getElementById('chatmessages');
+            textarea.innerHTML = `You changed room into: ${uuid}`;
+
+            selectedChat=uuid
+            return false;
+        }
+
+        function joinChatRoom() {
+            console.log("in join function")
+            const newchat = document.getElementById("join").value;
+            if (loggedInUsername == ""){
+                alert('Must select a username')
+                return false
+            }
+            if (newchat == ""){
+                alert('Must add a chat ID')
+                return false
+            }
+            if (newchat != null) {
+                selectedChat = newchat;
                 header = document.getElementById("chat-header").innerHTML = "Currently in chatroom: " + selectedChat
 
-                let changeEvent = new ChangeChatRoomEvent(selectedChat);
+                let changeEvent = new ChangeChatRoomEvent(selectedChat, loggedInUsername);
                 console.log(changeEvent)
                 sendEvent("change_room", changeEvent)
 
                 textarea = document.getElementById('chatmessages');
                 textarea.innerHTML = `You changed room into: ${selectedChat}`;
             }
-            return false;
+            return false
         }
 
+        function guestJoinChat(ID) {
+            if (loggedInUsername == "") {
+                alert('Must select a username')
+                return false
+            }        
+            header = document.getElementById("chat-header").innerHTML = "Currently in chatroom: " + ID
+
+            let changeEvent = new ChangeChatRoomEvent(ID, loggedInUsername);
+            console.log(changeEvent)
+            sendEvent("change_room", changeEvent)
+
+            textarea = document.getElementById('chatmessages');
+            textarea.innerHTML = `You are in room: ${ID}`;
+            return false
+        }
+                    
         function sendMessage() {
                 var newmessage = document.getElementById("message");
+                if (loggedInUsername == ""){
+                    alert('Must select a username')
+                    return false
+                }
                 if (newmessage != null) {
                     let outgoingEvent = new ReceiveMessageEvent(newmessage.value, loggedInUsername);
                     sendEvent("send_message", outgoingEvent)
+                    newmessage.value = "";
                 }
                 return false;
             }
@@ -137,12 +208,9 @@
             conn.send(JSON.stringify(event))
         }
 
-
-
         function login(){
             let formData = {
                 "username":document.getElementById("username").value,
-                "password": document.getElementById("password").value
             }
             fetch("login", {
                 method: 'post',
@@ -152,20 +220,48 @@
                 if (response.ok){
                     return response.json();
                 }else{
-                    throw 'unauthorized';
+                    throw 'Username taken';
                 }
             }).then((data) =>{
                 loggedInUsername = formData.username
+                user = document.getElementById('loggeduser');
+                user.innerHTML = `Current User: ${loggedInUsername}`;
                 //we are authenticated
                 connectWebsocket(data.otp);
+
             }).catch((e) => {alert(e)})
+            return false;
+        }
+        
+        function guestLogin() {
+            let formData = {
+                "username": document.getElementById("guest-username").value,
+            }
+            fetch("login", {
+                method: 'post',
+                body: JSON.stringify(formData),
+                mode: 'cors',
+            }).then((response) => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw 'Username taken';
+                }
+            }).then((data) => {
+                loggedInUsername = formData.username
+                user = document.getElementById('loggeduser');
+                user.innerHTML = `Current User: ${loggedInUsername}`;
+                
+                //we are authenticated
+                guestConnectWebsocket(data.otp);
+            }).catch((e) => { alert(e) })
             return false;
         }
 
         function connectWebsocket(otp){
              if (window["WebSocket"]) {
                 console.log("supports websocket")
-                conn = new WebSocket("ws://" + document.location.host + "/ws?otp="+otp)
+                conn = new WebSocket("ws://" + document.location.host + "/ws?otp="+otp + "&user=" + loggedInUsername)
                 conn.onopen = function (evt){
                     document.getElementById("connection-header").innerHTML = "Connected to WS: True"
                 }
@@ -184,12 +280,79 @@
             }
         }
 
+        function guestConnectWebsocket(otp) {
+            if (window["WebSocket"]) {
+                console.log("supports websocket")
+                conn = new WebSocket("ws://" + document.location.host + "/ws?otp=" + otp + "&user=" + loggedInUsername)
+                conn.onopen = function (evt) {
+                    const queryString = window.location.search;
+                    const urlParams = new URLSearchParams(queryString);
+                    const roomId = urlParams.get('room');
+                    guestJoinChat(roomId)
+                    selectedChat = roomId
+                    document.getElementById("connection-header").innerHTML = "Connected to WS: True"
+                    const modal = document.getElementById('customAlert');
+                    modal.style.display = 'none';
+                }
+                conn.onclose = function (evt) {
+                    document.getElementById("connection-header").innerHTML = "Connected to WS: False"
+                    //reconnect retry unless manual close connection
+                }
+
+                conn.onmessage = function (evt) {
+                    const eventData = JSON.parse(evt.data);
+                    const event = Object.assign(new Event, eventData);
+                    routeEvent(event);
+                }
+            } else {
+                alert('Browser does not support websockets')
+            }
+        }
+
         window.onload = function(){
+            console.log(window.location.search)
+            if (window.location.search.indexOf('room') !== -1) {
+                showCustomAlert();
+            }
+            
+            document.getElementById("username").focus();
             document.getElementById("chatroom-selection").onsubmit = changeChatRoom;
             document.getElementById("chatroom-message").onsubmit = sendMessage;
             document.getElementById("login-form").onsubmit = login;
+            document.getElementById("join-room").onsubmit = joinChatRoom;
+            document.getElementById("customAlertForm").onsubmit = guestLogin;
+            
         };
+
+        function copyToClipboard(button){
+                const input = document.createElement('input');
+                input.value = window.location.origin + "/?room=" + selectedChat;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy Chat Link';
+                }, 1500);
+                
+            }
+
+        function generateUUID() {
+                const array = new Uint8Array(16);
+                window.crypto.getRandomValues(array);
+
+                array[6] = (array[6] & 0x0f) | 0x40; // Set the 4 most significant bits of the 7th byte to 0100
+                array[8] = (array[8] & 0x3f) | 0x80; // Set the 2 most significant bits of the 9th byte to 10
+
+                return [...array].map((byte, index) => {
+                    const str = byte.toString(16).padStart(2, '0');
+                    return (index === 4 || index === 6 || index === 8 || index === 10) ? `-${str}` : str;
+                }).join('');
+            }
+
     </script>
+
 </body>
 
 </html>

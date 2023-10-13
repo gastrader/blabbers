@@ -29,6 +29,6 @@ type NewMessageEvent struct{
 }
 
 type ChangeRoomEvent struct{
-	Name string `json="name"`
-
+	Name string `json:"name"`
+	From string `json:"from"`
 }

@@ -8,7 +8,7 @@ import (
 
 func main() {
 	setupAPI()
-	log.Fatal(http.ListenAndServeTLS("localhost:8080", "server.crt", "server_rsa.key", nil))
+	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }
 
 func setupAPI() {

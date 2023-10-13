@@ -34,7 +34,7 @@ func NewManager(ctx context.Context) *Manager {
 	m := &Manager{
 		clients:  make(ClientList),
 		handlers: make(map[string]EventHandler),
-		otps: NewRetentionMap(ctx, 5*time.Second),
+		otps:     NewRetentionMap(ctx, 5*time.Second),
 	}
 	m.setupEventHandlers()
 	return m
@@ -45,18 +45,20 @@ func (m *Manager) setupEventHandlers() {
 	m.handlers[EventChangeRoom] = ChatRoomHandler
 }
 
-func ChatRoomHandler(event Event, c *Client) error{
+func ChatRoomHandler(event Event, c *Client) error {
 	var changeRoomEvent ChangeRoomEvent
-	if err := json.Unmarshal(event.Payload, &changeRoomEvent); err != nil{
-		return fmt.Errorf("Bad payload in request: %v", err)
+	fmt.Println(event.Payload)
+	if err := json.Unmarshal(event.Payload, &changeRoomEvent); err != nil {
+		return fmt.Errorf("bad payload in request: %v", err)
 	}
-	c.chatroom = changeRoomEvent.Name
+	c.chatroom = changeRoomEvent.Name 	
 	return nil
 }
 
 func SendMessage(event Event, c *Client) error {
 	var chatEvent SendMessageEvent
-	if err := json.Unmarshal(event.Payload, &chatEvent); err != nil{
+	fmt.Println(event.Payload)
+	if err := json.Unmarshal(event.Payload, &chatEvent); err != nil {
 		return fmt.Errorf("bad payload in request: %v", err)
 	}
 	var broadcastMsg NewMessageEvent
@@ -65,19 +67,20 @@ func SendMessage(event Event, c *Client) error {
 	broadcastMsg.From = chatEvent.From
 
 	data, err := json.Marshal(broadcastMsg)
-	if err != nil{
-		return fmt.Errorf("failed to marshal broadcast msg: %v" ,err)
+	if err != nil {
+		return fmt.Errorf("failed to marshal broadcast msg: %v", err)
 	}
 
 	outgoingEvent := Event{
 		Payload: data,
-		Type: EventReceiveMessage,
+		Type:    EventReceiveMessage,
 	}
-	for client := range c.manager.clients{
-		if client.chatroom == c.chatroom{
+	for client := range c.manager.clients {
+		fmt.Printf("%+v\n", client)
+		if client.chatroom == c.chatroom {
 			client.egress <- outgoingEvent
 		}
-		
+
 	}
 
 	return nil
@@ -96,11 +99,12 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 
 func (m *Manager) serverWS(w http.ResponseWriter, r *http.Request) {
 	otp := r.URL.Query().Get("otp")
-	if otp == ""{
+	username := r.URL.Query().Get("user")
+	if otp == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	if !m.otps.VerifyOTP(otp){
+	if !m.otps.VerifyOTP(otp) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -111,26 +115,38 @@ func (m *Manager) serverWS(w http.ResponseWriter, r *http.Request) {
 		log.Panicln(err)
 		return
 	}
-	client := NewClient(conn, m)
+	client := NewClient(conn, m, username)
 	m.addClient(client)
+	for client := range m.clients {
+		fmt.Println("current clients: ", client.Username)
+	}
 
 	//Start 2 go routines per client (reading/writing messages)
 	go client.readMesssages()
 	go client.writeMessages()
-
 }
 
-func(m *Manager) loginHandler(w http.ResponseWriter, r *http.Request){
-	type userLoginRequest struct{
+func (m *Manager) loginHandler(w http.ResponseWriter, r *http.Request) {
+	type userLoginRequest struct {
 		Username string `json:"username"`
-		Password string `json:"password"`
 	}
 	var req userLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil{
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.Username == "test" && req.Password == "123" {
+	usernameExists := false
+	for client := range m.clients {
+		if client.Username == req.Username {
+			usernameExists = true
+			break
+		}
+	}
+	if usernameExists {
+		http.Error(w, "Username already exists", http.StatusBadRequest)
+		return
+	}
+	if req.Username != "" {
 		type response struct {
 			OTP string `json:"otp"`
 		}
@@ -139,23 +155,7 @@ func(m *Manager) loginHandler(w http.ResponseWriter, r *http.Request){
 			OTP: otp.Key,
 		}
 		data, err := json.Marshal(resp)
-		if err != nil{
-			log.Println(err)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(data)
-		return
-	} else if req.Username=="admin" && req.Password=="123"{
-			type response struct {
-			OTP string `json:"otp"`
-		}
-		otp := m.otps.NewOTP()
-		resp := response{
-			OTP: otp.Key,
-		}
-		data, err := json.Marshal(resp)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			return
 		}

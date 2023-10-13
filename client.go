@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	pongWait = 10 * time.Second
+	pongWait = 20 * time.Second
 
 	pingInterval = (pongWait*9)/10
 )
@@ -19,18 +19,19 @@ type ClientList map[*Client]bool
 type Client struct {
 	connection *websocket.Conn
 	manager *Manager
-	
-	chatroom string
+	chatroom string	
+	Username string
 
 	//egress is used to avoid concurrent writes on ws conn
 	egress chan Event
 }
 
-func NewClient(conn *websocket.Conn, manager *Manager) *Client{
+func NewClient(conn *websocket.Conn, manager *Manager, user string) *Client{
 	return &Client{
 		connection: conn,
 		manager: manager,
 		egress: make(chan Event),
+		Username: user,
 	}
 }
 
