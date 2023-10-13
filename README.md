@@ -27,12 +27,13 @@ Welcome to **Blabbers**, a go implementation of an end-to-end encrypted websocke
    - Efficient handling of client connections.
    - Robust error handling to ensure uninterrupted communication.
      
-##Try it for yourself!
+## Try it for yourself!
 
 ```bash
 git clone https://github.com/gastrader/blabbers.git
 go mod download
 go run .
+```
 
 
 
