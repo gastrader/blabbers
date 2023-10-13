@@ -47,7 +47,7 @@ func (m *Manager) setupEventHandlers() {
 
 func ChatRoomHandler(event Event, c *Client) error {
 	var changeRoomEvent ChangeRoomEvent
-	fmt.Println(event.Payload)
+	// fmt.Println(event.Payload)
 	if err := json.Unmarshal(event.Payload, &changeRoomEvent); err != nil {
 		return fmt.Errorf("bad payload in request: %v", err)
 	}
@@ -57,7 +57,7 @@ func ChatRoomHandler(event Event, c *Client) error {
 
 func SendMessage(event Event, c *Client) error {
 	var chatEvent SendMessageEvent
-	fmt.Println(event.Payload)
+	// fmt.Println(event.Payload)
 	if err := json.Unmarshal(event.Payload, &chatEvent); err != nil {
 		return fmt.Errorf("bad payload in request: %v", err)
 	}
@@ -76,13 +76,10 @@ func SendMessage(event Event, c *Client) error {
 		Type:    EventReceiveMessage,
 	}
 	for client := range c.manager.clients {
-		fmt.Printf("%+v\n", client)
 		if client.chatroom == c.chatroom {
 			client.egress <- outgoingEvent
 		}
-
 	}
-
 	return nil
 }
 
@@ -100,6 +97,7 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 func (m *Manager) serverWS(w http.ResponseWriter, r *http.Request) {
 	otp := r.URL.Query().Get("otp")
 	username := r.URL.Query().Get("user")
+
 	if otp == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return

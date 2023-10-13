@@ -23,7 +23,7 @@
         </form>
 
 
-        <form id="chatroom-selection" style="margin-top: 10px;">
+        <form id="chatroom-selection" style="margin-top: 10px;" onsubmit="changeChatRoom(event)">
             <label>Chatroom:</label>
             <input type="submit" value="Create a private chat"/>
         </form>
@@ -68,6 +68,7 @@
     <script>
         let loggedInUsername = "";
         var selectedChat = "general";
+        let keys = ""
 
         class Event {
             constructor(type, payload){
@@ -99,9 +100,9 @@
         }
 
         function showCustomAlert() {
-                const modal = document.getElementById('customAlert');
-                modal.style.display = 'block';
-            }
+            const modal = document.getElementById('customAlert');
+            modal.style.display = 'block';
+        }
 
         function closeCustomAlert() {
             const modal = document.getElementById('customAlert');
@@ -114,8 +115,8 @@
             }
             switch (event.type) {
                 case "receive_message":
+                    console.log("trying to post new msg")
                     const messageEvent = Object.assign(new ReceiveMessageEvent, event.payload)
-                    console.log(event.payload)
                     appendChatMessage(messageEvent)
                     break;
                 default:
@@ -124,32 +125,77 @@
             }
         }
 
-        function appendChatMessage(messageEvent) {
+        async function appendChatMessage(messageEvent) {
+            const objectKey = window.location.hash.slice("#key=".length);
+            console.log("From the URL is: ", objectKey)
+            const key = await window.crypto.subtle.importKey(
+                "jwk",
+                {
+                    k: objectKey,
+                    alg: "A128GCM",
+                    ext: true,
+                    key_ops: ["encrypt", "decrypt"],
+                    kty: "oct",
+                },
+                { name: "AES-GCM", length: 128 },
+                false, // extractable
+                ["decrypt"],
+            );
+            console.log("The appending key is:", key)
+            console.log("The message is: ", messageEvent.sent)
+            const originalBuffer = base64ToArrayBuffer(messageEvent.message)
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: new Uint8Array(12) },
+                key,
+                originalBuffer,
+            );
+            const decoded = new window.TextDecoder().decode(new Uint8Array(decrypted));
+            const content = JSON.parse(decoded);
+
+
             var date = new Date(messageEvent.sent);
+            const formattedMsg = `${date.toLocaleString()} - ${messageEvent.from}: ${content}`;
+            textarea = document.getElementById('chatmessages');
+            textarea.innerHTML = textarea.innerHTML + "\n" + formattedMsg
+            textarea.scrollTop = textarea.scrollHeight;
+        }
+
+        function appendChatJoin(messageEvent) {
+            
             const formattedMsg = `${date.toLocaleString()} - ${messageEvent.from}: ${messageEvent.message}`;
             textarea = document.getElementById('chatmessages');
             textarea.innerHTML = textarea.innerHTML + "\n" + formattedMsg
             textarea.scrollTop = textarea.scrollHeight;
         }
 
-        function changeChatRoom(){
-            console.log("in the function")
+        async function changeChatRoom(event){
+            event.preventDefault();
+             if (loggedInUsername == "") {
+                alert('Must select a username')
+                return false
+            }
             const username = document.getElementById('username').value
             const uuid = generateUUID();
             let changeEvent = new ChangeChatRoomEvent(uuid, username);
-            console.log(changeEvent)
             sendEvent("change_room", changeEvent)
 
             header = document.getElementById("chat-header").innerHTML = "Currently in chatroom: " + uuid
             textarea = document.getElementById('chatmessages');
             textarea.innerHTML = `You changed room into: ${uuid}`;
 
+            const key = await createKey();
+            console.log("the type is", typeof key.key)
+            console.log("the key is", key.key)
+            keys = key.key         
+            console.log(key.key)
+            history.pushState(null, null, `/#key=${key.objectKey}`);
+
             selectedChat=uuid
             return false;
         }
 
-        function joinChatRoom() {
-            console.log("in join function")
+        async function joinChatRoom() {
+            event.preventDefault();
             const newchat = document.getElementById("join").value;
             if (loggedInUsername == ""){
                 alert('Must select a username')
@@ -160,6 +206,7 @@
                 return false
             }
             if (newchat != null) {
+
                 selectedChat = newchat;
                 header = document.getElementById("chat-header").innerHTML = "Currently in chatroom: " + selectedChat
 
@@ -169,11 +216,26 @@
 
                 textarea = document.getElementById('chatmessages');
                 textarea.innerHTML = `You changed room into: ${selectedChat}`;
+                
+                try {
+                    const message = "HAS JUST JOINED THE CHAT";
+                    const string = await encryptData(message);
+
+                    let joinEvent = new SendMessageEvent(string, loggedInUsername);
+                    sendEvent("send_message", joinEvent);
+                } catch (error) {
+                    if (error.message.includes('The JWK "k" member did not include the right length')) {
+                        alert('The provided key is of incorrect length. Please provide a valid key to receive messages from others.');
+                    } else {
+                        alert('An error occurred: ' + error.message);
+                    }
+                }
             }
             return false
         }
 
-        function guestJoinChat(ID) {
+        async function guestJoinChat(ID) {
+            event.preventDefault();
             if (loggedInUsername == "") {
                 alert('Must select a username')
                 return false
@@ -186,21 +248,113 @@
 
             textarea = document.getElementById('chatmessages');
             textarea.innerHTML = `You are in room: ${ID}`;
+
+            const messageEvent = {
+                message : "HAS JUST JOINED THE CHAT"
+            }
+            const string = await encryptData(messageEvent.message)
+            
+
+            let joinEvent = new SendMessageEvent(string, loggedInUsername);
+            sendEvent("send_message", joinEvent)
             return false
         }
+        async function encryptData(message){
+            const objectKey = window.location.hash.slice("#key=".length);
+            console.log("From the URL is: ", objectKey)
+            const key = await window.crypto.subtle.importKey(
+                "jwk",
+                {
+                    k: objectKey,
+                    alg: "A128GCM",
+                    ext: true,
+                    key_ops: ["encrypt", "decrypt"],
+                    kty: "oct",
+                },
+                { name: "AES-GCM", length: 128 },
+                false, // extractable
+                ["encrypt", "decrypt"],
+            );
+            console.log("The appending key is..:", key)
+
+            const encrypted = await window.crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: new Uint8Array(12) /* don't reuse key! */ },
+                key,
+                new TextEncoder().encode(JSON.stringify(message))
+            )
+            console.log(encrypted)
+            return string = arrayBufferToBase64(encrypted)
+        }
+       
                     
-        function sendMessage() {
-                var newmessage = document.getElementById("message");
-                if (loggedInUsername == ""){
-                    alert('Must select a username')
-                    return false
+        async function sendMessage() {
+            event.preventDefault();
+            var newmessage = document.getElementById("message");
+            if (loggedInUsername == ""){
+                alert('Must select a username')
+                return false
+            }
+            if (newmessage != null) {
+                try{
+                const objectKey = window.location.hash.slice("#key=".length);
+                console.log("From the URL is: ", objectKey)
+                const key = await window.crypto.subtle.importKey(
+                    "jwk",
+                    {
+                        k: objectKey,
+                        alg: "A128GCM",
+                        ext: true,
+                        key_ops: ["encrypt", "decrypt"],
+                        kty: "oct",
+                    },
+                    { name: "AES-GCM", length: 128 },
+                    false, // extractable
+                     ["encrypt", "decrypt"],
+                );
+                console.log("The appending key is..:", key)
+
+                const encrypted = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: new Uint8Array(12) /* don't reuse key! */ },
+                    key,
+                    new TextEncoder().encode(JSON.stringify(newmessage.value))
+                )
+                // const encryptedBase64 = arrayBufferToBase64(encrypted);
+                console.log(encrypted)
+                const string = arrayBufferToBase64(encrypted)
+                console.log(string)
+                let outgoingEvent = new ReceiveMessageEvent(string, loggedInUsername);
+                console.log(encrypted)
+                sendEvent("send_message", outgoingEvent)
+                newmessage.value = "";
+                }catch (error) {
+                    if (error.message.includes('The JWK "k" member did not include the right length')) {
+                        alert('The provided key is of incorrect length. Please provide a valid key to receive messages from others.');
+                    } else {
+                        alert('An error occurred: ' + error.message);
+                    }
                 }
-                if (newmessage != null) {
-                    let outgoingEvent = new ReceiveMessageEvent(newmessage.value, loggedInUsername);
-                    sendEvent("send_message", outgoingEvent)
-                    newmessage.value = "";
+            }
+            return false;
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+                const binaryString = window.atob(base64);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
                 }
-                return false;
+                return bytes.buffer;
             }
 
         function sendEvent(eventName, payload){
@@ -232,7 +386,7 @@
             }).catch((e) => {alert(e)})
             return false;
         }
-        
+
         function guestLogin() {
             let formData = {
                 "username": document.getElementById("guest-username").value,
@@ -315,8 +469,8 @@
                 showCustomAlert();
             }
             
-            document.getElementById("username").focus();
-            document.getElementById("chatroom-selection").onsubmit = changeChatRoom;
+            // document.getElementById("username").focus();
+            // document.getElementById("chatroom-selection").onsubmit = changeChatRoom;
             document.getElementById("chatroom-message").onsubmit = sendMessage;
             document.getElementById("login-form").onsubmit = login;
             document.getElementById("join-room").onsubmit = joinChatRoom;
@@ -325,31 +479,60 @@
         };
 
         function copyToClipboard(button){
-                const input = document.createElement('input');
-                input.value = window.location.origin + "/?room=" + selectedChat;
-                document.body.appendChild(input);
-                input.select();
-                document.execCommand('copy');
-                document.body.removeChild(input);
-                button.textContent = 'Copied!';
-                setTimeout(() => {
-                    button.textContent = 'Copy Chat Link';
-                }, 1500);
-                
+            // const objectKey =  await createKey()
+            const hash = window.location.hash;
+            const hashKey = hash.replace('#key=', '');
+            console.log(hashKey);
+            key = keys
+
+            const input = document.createElement('input');
+            input.value = window.location.origin + "/?room=" + selectedChat + "#key=" + hashKey;
+
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = 'Copy Chat Link';
+            }, 1500);
+            
+        }
+        async function createKey(){
+            const key = await window.crypto.subtle.generateKey(
+                { name: "AES-GCM", length: 128 },
+                true, // extractable
+                ["encrypt", "decrypt"],
+            );
+            objectKey = (await window.crypto.subtle.exportKey("jwk", key)).k
+            return {
+                key: key,
+                objectKey: objectKey
+            };
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
             }
+            return window.btoa(binary);
+        }
 
         function generateUUID() {
-                const array = new Uint8Array(16);
-                window.crypto.getRandomValues(array);
+            const array = new Uint8Array(16);
+            window.crypto.getRandomValues(array);
 
-                array[6] = (array[6] & 0x0f) | 0x40; // Set the 4 most significant bits of the 7th byte to 0100
-                array[8] = (array[8] & 0x3f) | 0x80; // Set the 2 most significant bits of the 9th byte to 10
+            array[6] = (array[6] & 0x0f) | 0x40; // Set the 4 most significant bits of the 7th byte to 0100
+            array[8] = (array[8] & 0x3f) | 0x80; // Set the 2 most significant bits of the 9th byte to 10
 
-                return [...array].map((byte, index) => {
-                    const str = byte.toString(16).padStart(2, '0');
-                    return (index === 4 || index === 6 || index === 8 || index === 10) ? `-${str}` : str;
-                }).join('');
-            }
+            return [...array].map((byte, index) => {
+                const str = byte.toString(16).padStart(2, '0');
+                return (index === 4 || index === 6 || index === 8 || index === 10) ? `-${str}` : str;
+            }).join('');
+        }
 
     </script>
 
