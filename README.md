@@ -31,6 +31,7 @@ Welcome to **Blabbers**, a go implementation of an end-to-end encrypted websocke
 
 ```bash
 git clone https://github.com/gastrader/blabbers.git
+cd blabbers
 go mod download
 go run .
 ```
