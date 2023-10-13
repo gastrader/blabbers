@@ -6,7 +6,7 @@ Welcome to **Blabbers**, a go implementation of an end-to-end encrypted websocke
 
 1. **Client Side Encryption**
    - Utilize Web Cryptography APIs to encrpyt/decrypt data.
-   - Keys distributed as part of URL so the server can never see it:
+   - Keys distributed as part of URL so the server can never see it: <br>
      http://localhost:8080/?room=0b158544-5774-44a0-aae4-b0b54952e95f#key=bZn7UbLbJB4_ILIsbgfvUg
 
 2. **Event Handling**
