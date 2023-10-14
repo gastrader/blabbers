@@ -7,19 +7,17 @@ import (
 )
 
 func main() {
-	mux := setupAPI()
-	log.Fatal(http.ListenAndServe(":3000", mux))
+	setupAPI()
+	log.Fatal(http.ListenAndServe(":3000", nil))
 }
 
-func setupAPI() *http.ServeMux {
+func setupAPI() {
 	ctx := context.Background()
 	manager := NewManager(ctx)
 
-	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.Dir("./frontend")))
-	mux.HandleFunc("/ws", manager.serverWS)
-	mux.HandleFunc("/login", manager.loginHandler)
+	http.Handle("/", http.FileServer(http.Dir("./frontend")))
+	http.HandleFunc("/ws", manager.serverWS)
+	http.HandleFunc("/login", manager.loginHandler)
 
-	return mux
 }
