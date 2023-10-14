@@ -7,15 +7,19 @@ import (
 )
 
 func main() {
-	setupAPI()
-	log.Fatal(http.ListenAndServe("localhost:8080", nil))
+	mux := setupAPI()
+	log.Fatal(http.ListenAndServe(":3002", mux))
 }
 
-func setupAPI() {
+func setupAPI() *http.ServeMux {
 	ctx := context.Background()
 	manager := NewManager(ctx)
 
-	http.Handle("/", http.FileServer(http.Dir("./frontend")))
-	http.HandleFunc("/ws", manager.serverWS)
-	http.HandleFunc("/login", manager.loginHandler)
+	mux := http.NewServeMux()
+
+	mux.Handle("/", http.FileServer(http.Dir("./frontend")))
+	mux.HandleFunc("/ws", manager.serverWS)
+	mux.HandleFunc("/login", manager.loginHandler)
+
+	return mux
 }
