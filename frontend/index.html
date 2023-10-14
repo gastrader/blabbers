@@ -439,7 +439,7 @@
         function guestConnectWebsocket(otp) {
             if (window["WebSocket"]) {
                 console.log("supports websocket")
-                conn = new WebSocket("ws://" + document.location.host + "/ws?otp=" + otp + "&user=" + loggedInUsername)
+                conn = new WebSocket("wss://" + document.location.host + "/ws?otp=" + otp + "&user=" + loggedInUsername)
                 conn.onopen = function (evt) {
                     const queryString = window.location.search;
                     const urlParams = new URLSearchParams(queryString);
