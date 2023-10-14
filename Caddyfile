@@ -1,4 +1,3 @@
 www.pfglabs.com
 
 reverse_proxy server:80
-header_up www.pfglabs.com
