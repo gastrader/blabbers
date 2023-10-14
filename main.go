@@ -8,7 +8,7 @@ import (
 
 func main() {
 	setupAPI()
-	log.Fatal(http.ListenAndServe(":3002", nil))
+	log.Fatal(http. ListenAndServe(":3002", nil))
 }
 
 func setupAPI() {
