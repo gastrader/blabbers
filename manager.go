@@ -51,7 +51,7 @@ func ChatRoomHandler(event Event, c *Client) error {
 	if err := json.Unmarshal(event.Payload, &changeRoomEvent); err != nil {
 		return fmt.Errorf("bad payload in request: %v", err)
 	}
-	c.chatroom = changeRoomEvent.Name 	
+	c.chatroom = changeRoomEvent.Name
 	return nil
 }
 
@@ -183,7 +183,8 @@ func (m *Manager) removeClient(client *Client) {
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	switch origin {
-	case "https://www.pfglabs.com":
+	// case "https://www.pfglabs.com":
+	case "http://localhost:3001":
 		return true
 	default:
 		return false

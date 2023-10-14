@@ -41,13 +41,21 @@ function closeCustomAlert() {
   modal.style.display = "none";
 }
 
+function closeWindow() {
+  const modal = document.getElementById("window");
+  modal.style.display = "none";
+}
+function openWindow() {
+  const modal = document.getElementById("window");
+  modal.style.display = "block";
+}
+
 function routeEvent(event) {
   if (event.type === undefined) {
     alert("no type field in the event");
   }
   switch (event.type) {
     case "receive_message":
-      console.log("trying to post new msg");
       const messageEvent = Object.assign(
         new ReceiveMessageEvent(),
         event.payload
@@ -62,7 +70,6 @@ function routeEvent(event) {
 
 async function appendChatMessage(messageEvent) {
   const objectKey = window.location.hash.slice("#key=".length);
-  console.log("From the URL is: ", objectKey);
   const key = await window.crypto.subtle.importKey(
     "jwk",
     {
@@ -76,8 +83,6 @@ async function appendChatMessage(messageEvent) {
     false, // extractable
     ["decrypt"]
   );
-  console.log("The appending key is:", key);
-  console.log("The message is: ", messageEvent.sent);
   const originalBuffer = base64ToArrayBuffer(messageEvent.message);
   const decrypted = await window.crypto.subtle.decrypt(
     { name: "AES-GCM", iv: new Uint8Array(12) },
@@ -88,7 +93,7 @@ async function appendChatMessage(messageEvent) {
   const content = JSON.parse(decoded);
 
   var date = new Date(messageEvent.sent);
-  const formattedMsg = `${date.toLocaleString()} - ${
+  const formattedMsg = `${date.toLocaleTimeString()} - ${
     messageEvent.from
   }: ${content}`;
   textarea = document.getElementById("chatmessages");
@@ -97,7 +102,7 @@ async function appendChatMessage(messageEvent) {
 }
 
 function appendChatJoin(messageEvent) {
-  const formattedMsg = `${date.toLocaleString()} - ${messageEvent.from}: ${
+  const formattedMsg = `${messageEvent.from}: ${
     messageEvent.message
   }`;
   textarea = document.getElementById("chatmessages");
@@ -122,11 +127,8 @@ async function changeChatRoom(event) {
   textarea.innerHTML = `You changed room into: ${uuid}`;
 
   const key = await createKey();
-  console.log("the type is", typeof key.key);
-  console.log("the key is", key.key);
   keys = key.key;
-  console.log(key.key);
-  history.pushState(null, null, `/#key=${key.objectKey}`);
+  history.pushState(null, null, `/?room=${uuid}#key=${key.objectKey}`);
 
   selectedChat = uuid;
   return false;
@@ -149,14 +151,13 @@ async function joinChatRoom() {
       "Currently in chatroom: " + selectedChat;
 
     let changeEvent = new ChangeChatRoomEvent(selectedChat, loggedInUsername);
-    console.log(changeEvent);
     sendEvent("change_room", changeEvent);
 
     textarea = document.getElementById("chatmessages");
     textarea.innerHTML = `You changed room into: ${selectedChat}`;
 
     try {
-      const message = "HAS JUST JOINED THE CHAT";
+      const message = "has just joined the chat";
       const string = await encryptData(message);
 
       let joinEvent = new SendMessageEvent(string, loggedInUsername);
@@ -188,14 +189,13 @@ async function guestJoinChat(ID) {
     "Currently in chatroom: " + ID;
 
   let changeEvent = new ChangeChatRoomEvent(ID, loggedInUsername);
-  console.log(changeEvent);
   sendEvent("change_room", changeEvent);
 
   textarea = document.getElementById("chatmessages");
   textarea.innerHTML = `You are in room: ${ID}`;
 
   const messageEvent = {
-    message: "HAS JUST JOINED THE CHAT",
+    message: "has just joined the chat",
   };
   const string = await encryptData(messageEvent.message);
 
@@ -205,7 +205,6 @@ async function guestJoinChat(ID) {
 }
 async function encryptData(message) {
   const objectKey = window.location.hash.slice("#key=".length);
-  console.log("From the URL is: ", objectKey);
   const key = await window.crypto.subtle.importKey(
     "jwk",
     {
@@ -219,14 +218,12 @@ async function encryptData(message) {
     false, // extractable
     ["encrypt", "decrypt"]
   );
-  console.log("The appending key is..:", key);
 
   const encrypted = await window.crypto.subtle.encrypt(
     { name: "AES-GCM", iv: new Uint8Array(12) /* don't reuse key! */ },
     key,
     new TextEncoder().encode(JSON.stringify(message))
   );
-  console.log(encrypted);
   return (string = arrayBufferToBase64(encrypted));
 }
 
@@ -240,7 +237,6 @@ async function sendMessage() {
   if (newmessage != null) {
     try {
       const objectKey = window.location.hash.slice("#key=".length);
-      console.log("From the URL is: ", objectKey);
       const key = await window.crypto.subtle.importKey(
         "jwk",
         {
@@ -254,19 +250,14 @@ async function sendMessage() {
         false, // extractable
         ["encrypt", "decrypt"]
       );
-      console.log("The appending key is..:", key);
 
       const encrypted = await window.crypto.subtle.encrypt(
         { name: "AES-GCM", iv: new Uint8Array(12) /* don't reuse key! */ },
         key,
         new TextEncoder().encode(JSON.stringify(newmessage.value))
       );
-      // const encryptedBase64 = arrayBufferToBase64(encrypted);
-      console.log(encrypted);
       const string = arrayBufferToBase64(encrypted);
-      console.log(string);
       let outgoingEvent = new ReceiveMessageEvent(string, loggedInUsername);
-      console.log(encrypted);
       sendEvent("send_message", outgoingEvent);
       newmessage.value = "";
     } catch (error) {
@@ -340,7 +331,8 @@ function login() {
   return false;
 }
 
-function guestLogin() {
+function guestLogin(event) {
+    event.preventDefault();
   let formData = {
     username: document.getElementById("guest-username").value,
   };
@@ -374,7 +366,7 @@ function connectWebsocket(otp) {
   if (window["WebSocket"]) {
     console.log("supports websocket");
     conn = new WebSocket(
-      "wss://" +
+      "ws://" +
         document.location.host +
         "/ws?otp=" +
         otp +
@@ -405,7 +397,7 @@ function guestConnectWebsocket(otp) {
   if (window["WebSocket"]) {
     console.log("supports websocket");
     conn = new WebSocket(
-      "wss://" +
+      "ws://" +
         document.location.host +
         "/ws?otp=" +
         otp +
@@ -440,7 +432,6 @@ function guestConnectWebsocket(otp) {
 }
 
 window.onload = function () {
-  console.log(window.location.search);
   if (window.location.search.indexOf("room") !== -1) {
     showCustomAlert();
   }
@@ -449,7 +440,7 @@ window.onload = function () {
   // document.getElementById("chatroom-selection").onsubmit = changeChatRoom;
   document.getElementById("chatroom-message").onsubmit = sendMessage;
   document.getElementById("login-form").onsubmit = login;
-  document.getElementById("join-room").onsubmit = joinChatRoom;
+//   document.getElementById("join-room").onsubmit = joinChatRoom;
   document.getElementById("customAlertForm").onsubmit = guestLogin;
 };
 
@@ -457,7 +448,6 @@ function copyToClipboard(button) {
   // const objectKey =  await createKey()
   const hash = window.location.hash;
   const hashKey = hash.replace("#key=", "");
-  console.log(hashKey);
   key = keys;
 
   const input = document.createElement("input");
@@ -512,3 +502,27 @@ function generateUUID() {
     })
     .join("");
 }
+
+document.querySelectorAll('.alert1').forEach(function(button) {
+    button.addEventListener('click', function() {
+        alert('Visit www.plumega.com for more!');
+    });
+});
+document.addEventListener("DOMContentLoaded", function() {
+    var timeElement = document.querySelector(".taskbar-time");
+
+    function updateTime() {
+        var now = new Date();
+        var formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        timeElement.textContent = formattedTime;
+        timeElement.setAttribute("title", now.toLocaleString([], { weekday: 'long', month: 'long', day: '2-digit', minute: '2-digit', hour: '2-digit' }));
+    }
+
+    updateTime(); // Call once to set the initial time
+    setInterval(updateTime, 1000); // Update every second
+});
+
+document.getElementById("pfgLabsDiv").addEventListener("click", function() {
+    document.getElementById("pfgLabsDiv").classList.toggle("blue-background1");
+    document.getElementById("pfgLabsText").classList.toggle("blue-background");
+});
