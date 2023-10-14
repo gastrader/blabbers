@@ -18,6 +18,33 @@ body {
   height: 100%;
 }
 
+.window {
+    width: 400px;
+    height: 450px;
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.chatmessages{
+  width:350px;
+  height: 200px;
+  position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Adjust the width for screens smaller than 600px */
+@media (max-width: 600px) {
+    .window {
+      width: 350px; /* or whatever width you prefer for smaller screens */
+    }
+    .chatmessages{
+      width:325px
+    }
+}
+
 .modal {
   display: none;
   position: fixed;
