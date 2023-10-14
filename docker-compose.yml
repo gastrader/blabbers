@@ -16,7 +16,7 @@ services:
       dockerfile: Dockerfile 
     restart: always
     ports: 
-     - 3001:3001
+     - 3002:3002
     logging: *highlight-logging
   
   caddy:
