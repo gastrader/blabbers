@@ -8,7 +8,7 @@ import (
 
 func main() {
 	mux := setupAPI()
-	log.Fatal(http.ListenAndServe(":3002", mux))
+	log.Fatal(http.ListenAndServe(":3000", mux))
 }
 
 func setupAPI() *http.ServeMux {
