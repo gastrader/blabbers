@@ -366,7 +366,7 @@ function connectWebsocket(otp) {
   if (window["WebSocket"]) {
     console.log("supports websocket");
     conn = new WebSocket(
-      "ws://" +
+      "wss://" +
         document.location.host +
         "/ws?otp=" +
         otp +
@@ -397,7 +397,7 @@ function guestConnectWebsocket(otp) {
   if (window["WebSocket"]) {
     console.log("supports websocket");
     conn = new WebSocket(
-      "ws://" +
+      "wss://" +
         document.location.host +
         "/ws?otp=" +
         otp +
