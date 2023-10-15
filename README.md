@@ -33,6 +33,7 @@ Welcome to **Blabbers**, a go implementation of an end-to-end encrypted websocke
 git clone https://github.com/gastrader/blabbers.git
 cd blabbers
 go mod download
+docker compose up -d
 go run .
 ```
 
