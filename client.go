@@ -22,7 +22,7 @@ type Client struct {
 	chatroom string	
 	Username string
 
-	//egress is used to avoid concurrent writes on ws conn
+	//egress is used to avoid concurrent writes on ws connection
 	egress chan Event
 }
 
@@ -37,7 +37,7 @@ func NewClient(conn *websocket.Conn, manager *Manager, user string) *Client{
 
 func (c *Client) readMesssages() {
 	defer func(){
-		//cleanup connection
+		
 		c.manager.removeClient(c)
 	}()
 
@@ -95,7 +95,7 @@ func (c *Client) writeMessages(){
 			if err := c.connection.WriteMessage(websocket.TextMessage, data); err != nil{
 				log.Printf("failed to send message: %v", err)
 			}
-			// log.Println("message sent: ",message)
+			
 		case <- ticker.C:
 			log.Println("ping")
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte(``)); err != nil{
