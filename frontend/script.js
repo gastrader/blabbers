@@ -453,6 +453,8 @@ window.onload = function () {
   if (window.location.search.indexOf("room") !== -1) {
     showCustomAlert();
   }
+  const task = document.getElementById("task");
+  task.classList.add('toggled');
 
   // document.getElementById("username").focus();
   // document.getElementById("chatroom-selection").onsubmit = changeChatRoom;
