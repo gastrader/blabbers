@@ -183,8 +183,8 @@ func (m *Manager) removeClient(client *Client) {
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	switch origin {
-	case "https://www.pfglabs.com":
-	// case "http://localhost:3001":
+	// case "https://www.pfglabs.com":
+	case "http://localhost:3001":
 		return true
 	default:
 		return false

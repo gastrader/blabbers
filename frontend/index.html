@@ -30,8 +30,8 @@
         <div class="icon-wrapper"
             style="cursor: pointer;height: 32px; width: 75px; background-image: url(./assets/folder2.png); background-repeat: no-repeat; background-position: 50%; padding-bottom: 15px;">
         </div>
-        <div class="title" style="cursor: pointer;width: 75px; margin-bottom: 20px;">My Pictures</div>
-        <div id="pfgLabsDiv" style="width: 75px;">
+        <div class="title" style="cursor: pointer;width: 75px; margin-bottom: 20px; ">My Pictures</div>
+        <div id="pfgLabsDiv" style="width: 75px; background-image: url(./assets/arrow.png);background-repeat: no-repeat; background-position: 13px 7px;">
             <div class="icon-wrapper1" onclick="openWindow()" 
                 style="cursor: pointer;height: 32px; width: 75px; background-image: url(./assets/network.png); background-repeat: no-repeat; background-position: 50%; padding-bottom: 15px;">
             </div>
@@ -47,7 +47,7 @@
             </a>
             
             <div class="title-bar-controls">
-                <button aria-label="Minimize" class="alert1"></button>
+                <button aria-label="Minimize" onclick="toggleWindow()"></button>
                 <button aria-label="Maximize" class="alert1"></button>
                 <button aria-label="Close" onclick="closeWindow()"></button>
             </div>
@@ -119,7 +119,12 @@
             <b >Start</b>
         </button>
         <div class="taskbar-divider" style="border-left: 1px solid rgb(128, 128, 128); border-right: 1px solid white;"></div>
-        <div class="tasks"></div>
+        <div class="tasks">
+            <button class="task" id="task" style="width: 220px; padding-left: 10px; flex: auto;" onclick="toggleWindow()">
+                <img src="./assets/network.png" style="width: 16px; height: 16px;">
+                <span style="color: black; line-height: 14px; justify-content: center; font-weight: 400; font-size: 14;">PFG: E2E Encrypted Chatrooms</span>
+            </button>
+        </div>
         <div class="taskbar-divider" style="border-left: 1px solid rgb(128, 128, 128); border-right: 1px solid white;"></div>
         <div class="tray inset-shallow">
             <div class="tray-icons" >

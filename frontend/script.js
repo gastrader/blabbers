@@ -1,5 +1,6 @@
 let loggedInUsername = "";
-var selectedChat = "general";
+var selectedChat = "General";
+var insecureKey = "0000000000000000000000";
 let keys = "";
 
 class Event {
@@ -29,25 +30,6 @@ class ChangeChatRoomEvent {
     this.name = name;
     this.from = from;
   }
-}
-
-function showCustomAlert() {
-  const modal = document.getElementById("customAlert");
-  modal.style.display = "block";
-}
-
-function closeCustomAlert() {
-  const modal = document.getElementById("customAlert");
-  modal.style.display = "none";
-}
-
-function closeWindow() {
-  const modal = document.getElementById("window");
-  modal.style.display = "none";
-}
-function openWindow() {
-  const modal = document.getElementById("window");
-  modal.style.display = "block";
 }
 
 function routeEvent(event) {
@@ -124,7 +106,7 @@ async function changeChatRoom(event) {
   header = document.getElementById("chat-header").innerHTML =
     "Currently in chatroom: " + uuid;
   textarea = document.getElementById("chatmessages");
-  textarea.innerHTML = `You changed room into: ${uuid}`;
+  textarea.innerHTML = `You entered the room: ${uuid}`;
 
   const key = await createKey();
   keys = key.key;
@@ -154,7 +136,7 @@ async function joinChatRoom() {
     sendEvent("change_room", changeEvent);
 
     textarea = document.getElementById("chatmessages");
-    textarea.innerHTML = `You changed room into: ${selectedChat}`;
+    textarea.innerHTML = `You entered the room: ${selectedChat}`;
 
     try {
       const message = "has just joined the chat";
@@ -163,8 +145,7 @@ async function joinChatRoom() {
       let joinEvent = new SendMessageEvent(string, loggedInUsername);
       sendEvent("send_message", joinEvent);
     } catch (error) {
-      if (
-        error.message.includes(
+      if (error.message.includes(
           'The JWK "k" member did not include the right length'
         )
       ) {
@@ -266,9 +247,36 @@ async function sendMessage() {
           'The JWK "k" member did not include the right length'
         )
       ) {
-        alert(
-          "The provided key is of incorrect length. Please provide a valid key to receive messages from others."
-        );
+        alert("The provided key is of incorrect length. We have provided you with an INSECURE key to continue in General chat.");
+        try{
+        history.pushState(null, null, `/?room=${selectedChat}#key=${insecureKey}`);
+        const objectKey = window.location.hash.slice("#key=".length);
+        const key = await window.crypto.subtle.importKey(
+        "jwk",
+        {
+          k: objectKey,
+          alg: "A128GCM",
+          ext: true,
+          key_ops: ["encrypt", "decrypt"],
+          kty: "oct",
+        },
+        { name: "AES-GCM", length: 128 },
+        false, // extractable
+        ["encrypt", "decrypt"]
+      );
+
+      const encrypted = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: new Uint8Array(12) /* don't reuse key! */ },
+        key,
+        new TextEncoder().encode(JSON.stringify(newmessage.value))
+      );
+      const string = arrayBufferToBase64(encrypted);
+      let outgoingEvent = new ReceiveMessageEvent(string, loggedInUsername);
+      sendEvent("send_message", outgoingEvent);
+      newmessage.value = "";
+      }catch(error) {
+        alert("An error occurred: " + error.message);
+      }
       } else {
         alert("An error occurred: " + error.message);
       }
@@ -366,7 +374,7 @@ function connectWebsocket(otp) {
   if (window["WebSocket"]) {
     console.log("supports websocket");
     conn = new WebSocket(
-      "wss://" +
+      "ws://" +
         document.location.host +
         "/ws?otp=" +
         otp +
@@ -374,6 +382,16 @@ function connectWebsocket(otp) {
         loggedInUsername
     );
     conn.onopen = function (evt) {
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      const roomId = urlParams.get("room");
+      if (roomId == null){
+        guestJoinChat("General");
+        selectedChat = "General"
+      } else {
+        guestJoinChat(roomId);
+        selectedChat = roomId
+      }
       document.getElementById("connection-header").innerHTML =
         "Connected to Websocket: True";
     };
@@ -397,7 +415,7 @@ function guestConnectWebsocket(otp) {
   if (window["WebSocket"]) {
     console.log("supports websocket");
     conn = new WebSocket(
-      "wss://" +
+      "ws://" +
         document.location.host +
         "/ws?otp=" +
         otp +
@@ -526,3 +544,45 @@ document.getElementById("pfgLabsDiv").addEventListener("click", function() {
     document.getElementById("pfgLabsDiv").classList.toggle("blue-background1");
     document.getElementById("pfgLabsText").classList.toggle("blue-background");
 });
+
+
+function showCustomAlert() {
+  const modal = document.getElementById("customAlert");
+  modal.style.display = "block";
+}
+
+function closeCustomAlert() {
+  const modal = document.getElementById("customAlert");
+  modal.style.display = "none";
+}
+
+function closeWindow() {
+  const modal = document.getElementById("window");
+  modal.style.display = "none";
+  const task = document.getElementById("task");
+  task.style.display = "none";
+  task.classList.remove('toggled');
+  document.getElementById("pfgLabsDiv").classList.remove("blue-background1");
+  document.getElementById("pfgLabsText").classList.remove("blue-background");
+}
+function openWindow() {
+  const modal = document.getElementById("window");
+  modal.style.display = "block";
+  const task = document.getElementById("task");
+  task.style.display = "block";
+  task.classList.add('toggled');
+}
+
+function toggleWindow() {
+  const modal = document.getElementById("window");
+  const task = document.getElementById("task");
+  if (modal.style.display === "block" || modal.style.display === "") {
+    modal.style.display = "none";
+    task.classList.remove('toggled');
+    document.getElementById("pfgLabsDiv").classList.remove("blue-background1");
+    document.getElementById("pfgLabsText").classList.remove("blue-background");
+  } else {
+    modal.style.display = "block";
+    task.classList.add('toggled');
+  }
+}
