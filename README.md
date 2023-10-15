@@ -1,7 +1,9 @@
 # Blabbers: A Real-time Communication Platform
 
 Welcome to **Blabbers**, a go implementation of an end-to-end encrypted websocket communication platform.
-<img src="https://github.com/gastrader/blabbers/assets/37260212/dd9a054c-8a82-4680-9f81-0f04390a9409" alt="Blabbers Image" style="width: 50%;">
+
+![image](https://github.com/gastrader/blabbers/assets/37260212/781e63e8-877e-469d-80a7-eed1b6f9bc5c)
+
 
 
 ## Features
