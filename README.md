@@ -2,11 +2,13 @@
 
 Welcome to **Blabbers**, a go implementation of an end-to-end encrypted websocket communication platform.
 
-![image](https://github.com/gastrader/blabbers/assets/37260212/781e63e8-877e-469d-80a7-eed1b6f9bc5c)
+![image](/frontend/assets/home.png)
 
 
 
 ## Features
+
+![image](/frontend/assets/chat.png)
 
 1. **Client Side Encryption**
    - Utilize Web Cryptography APIs to encrpyt/decrypt data.
